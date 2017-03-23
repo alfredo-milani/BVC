@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="BVC:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/BVC_jar</output-path>
+    <root id="archive" name="BVC.jar">
+      <element id="module-output" name="BVC" />
+    </root>
+  </artifact>
+</component>
