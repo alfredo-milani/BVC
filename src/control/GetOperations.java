@@ -1,12 +1,14 @@
 package control;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.TrueFileFilter;
 import utility.Constants;
 
 import java.io.File;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Collection;
 import java.util.Date;
 
 
@@ -105,9 +107,20 @@ public class GetOperations {
         File[] sourceFile = this.sourceFile.listFiles();
         File[] destinationFile = this.destinationFile.listFiles();
 
+        System.out.println("source; " + this.sourceFile);
+        Collection<File> filesS = FileUtils.listFiles(this.sourceFile, TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE);
+        Collection<File> fileS2 = FileUtils.listFilesAndDirs(this.sourceFile, TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE);
+        for (File f : filesS)
+            System.out.println("S1: " + f);
+        for (File f2 : fileS2) {
+            System.out.println("S2: " + f2);
+            if (!f2.isDirectory())
+                fileS2.remove(f2);
+        }
+
         for (File s : sourceFile) {
             for (File d : destinationFile) {
-                System.out.println("s: " + absoluteDestinationPath + "\td: " + d);
+                System.out.println("s: " + s + "\td: " + d);
 
                 if (!s.isDirectory() && !d.isDirectory()) {
                     try {

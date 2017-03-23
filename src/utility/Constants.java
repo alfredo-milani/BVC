@@ -37,5 +37,5 @@ public interface Constants {
     String defaultTmpPathWindows = "R:\"DeletedFilesBVC";
     String defautlTmpPathLinux = "/home/" +
             System.getProperty("user.name") +
-            "Scaricati/shm/DeletedFileBVC";
+            "/Scaricati/shm/DeletedFilesBVC";
 }
