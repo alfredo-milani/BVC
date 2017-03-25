@@ -1,6 +1,7 @@
 package control;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.FalseFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import utility.Constants;
 
@@ -10,6 +11,9 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Scanner;
+
+import static utility.Constants.confirm;
 
 
 /**
@@ -33,10 +37,18 @@ public class GetOperations {
         this.ops = this.getOpType();
         this.sourceFile = checker(this.ops[1]);
         this.destinationFile = checker(this.ops[3]);
-        this.absoluteSourcePath =
-                this.sourceFile.getAbsolutePath();
-        this.absoluteDestinationPath =
-                this.destinationFile.getAbsolutePath();
+        try {
+            this.absoluteSourcePath =
+                    this.sourceFile.getCanonicalPath();
+            this.absoluteDestinationPath =
+                    this.destinationFile.getCanonicalPath();
+        } catch (IOException e) {
+            this.absoluteSourcePath =
+                    this.sourceFile.getAbsolutePath();
+            this.absoluteDestinationPath =
+                    this.destinationFile.getAbsolutePath();
+            e.printStackTrace();
+        }
         this.relativeCurrentSorcePath =
                 this.getRootDir(this.absoluteSourcePath);
         this.relativeCurrentDestinationPath =
@@ -55,7 +67,7 @@ public class GetOperations {
             throw new RuntimeException(Constants.defaultMsg);
 
         int lenArg = this.arg.length;
-        String k = Operations.Destionation.toString();
+        String k = Operations.Destination.toString();
         Operations l = Enum.valueOf(Operations.class, "Update");
         if (l == Operations.Update)
             System.out.println("prova enum");
@@ -102,25 +114,37 @@ public class GetOperations {
         if (this.ops.length == 0)
             throw new RuntimeException("Operazioni non definite!");
 
+        /*
+        if (!this.confirmOperation())
+            return;
+            */
+
         // consideriamo una sola funzione per ora:
         // quella di aggiornare la destinazione
-        File[] sourceFile = this.sourceFile.listFiles();
-        File[] destinationFile = this.destinationFile.listFiles();
+        Collection<File> sourceFile = FileUtils.listFilesAndDirs(
+                this.sourceFile, TrueFileFilter.INSTANCE, FalseFileFilter.INSTANCE
+        );
+        Collection<File> destinationFile = FileUtils.listFilesAndDirs(
+                this.sourceFile, TrueFileFilter.INSTANCE, FalseFileFilter.INSTANCE
+        );
 
-        System.out.println("source; " + this.sourceFile);
-        Collection<File> filesS = FileUtils.listFiles(this.sourceFile, TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE);
-        Collection<File> fileS2 = FileUtils.listFilesAndDirs(this.sourceFile, TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE);
-        for (File f : filesS)
-            System.out.println("S1: " + f);
-        for (File f2 : fileS2) {
-            System.out.println("S2: " + f2);
-            if (!f2.isDirectory())
-                fileS2.remove(f2);
-        }
+        this.printToScreen(this.absoluteSourcePath);
+        this.printFiles(sourceFile);
+        sourceFile.remove(
+          new File(this.relativeCurrentSorcePath)
+        );
+        destinationFile.remove(
+          new File(this.relativeCurrentDestinationPath)
+        );
+        this.printFiles(sourceFile);
+
+
+        // collection.stream().anyMatch(x -> x == f);
+
 
         for (File s : sourceFile) {
             for (File d : destinationFile) {
-                System.out.println("s: " + s + "\td: " + d);
+                //System.out.println("s: " + s + "\td: " + d);
 
                 if (!s.isDirectory() && !d.isDirectory()) {
                     try {
@@ -128,8 +152,8 @@ public class GetOperations {
                         // boolean e = FileUtils.contentEquals(s, d);
                         boolean e = FileUtils.contentEquals(new File("/home/alfredo/Scaricati/shm/prova1/dir1/file1"),
                                 new File("/home/alfredo/Scaricati/shm/prova2/dir1/file1"));
-                        if (e)
-                            System.out.println("madonna");
+                        //if (e)
+                            //System.out.println("madonna");
                     } catch (IOException e1) {
                         e1.printStackTrace();
                     }
@@ -143,8 +167,10 @@ public class GetOperations {
                     String dateFormattedSource = formatter.format(dateSource);
                     String dateFormattedDestination = formatter.format(dateDestination);
 
+                    /*
                     System.out.println("s: " + dateFormattedSource);
                     System.out.println("s: " + dateFormattedDestination);
+                    */
                 }
             }
         }
@@ -179,6 +205,47 @@ public class GetOperations {
         }
 
         return true;
+    }
+
+    private void strcturalCorr(File source, File destination) {
+        Collection<File> filesDir = FileUtils.listFilesAndDirs(
+                source, TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE
+        );
+        this.printToScreen("\nDirectory Sorgente:\r");
+        for (File f : filesDir)
+            this.printToScreen(f.getAbsolutePath());
+
+        filesDir = FileUtils.listFilesAndDirs(
+                destination, TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE
+        );
+        this.printToScreen("\n\nDirectory di Destinazione:\r");
+        for (File f : filesDir)
+            this.printToScreen(f.getAbsolutePath());
+    }
+
+    private boolean confirmOperation() {
+        Scanner reader = new Scanner(System.in);
+
+        this.printToScreen(String.format(confirm, this.absoluteDestinationPath, this.absoluteSourcePath));
+        this.printToScreen("(S/s -> Sì  -  N/n -> No)");
+        String c = reader.next();
+
+        return c.equals("S") || c.equals("s");
+    }
+
+    private void printToScreen(String string) {
+        System.out.println(string);
+    }
+
+    private void printFiles(Collection<File> fileCollection) {
+        this.printToScreen("\n");
+        for (File f : fileCollection)
+            System.out.println("file: " + f);
+    }
+
+    private void printFiles(File[] files) {
+        for (File f : files)
+            System.out.println("file: " + f);
     }
 
 }

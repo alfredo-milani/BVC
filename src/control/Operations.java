@@ -7,5 +7,5 @@ public enum Operations {
     Update,
     Differences,
     Source,
-    Destionation
+    Destination
 }

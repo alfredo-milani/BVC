@@ -21,6 +21,7 @@ public interface Constants {
     String readDenied = "Accesso in lettura non consentito per il path: %s";
     String writeDenied = "Accesso in scrittura non consentito per il path: %s";
     String osDetectFailed = "Impossibile determinare il tipo di OS per la determinazione della sintassi dei path dei files";
+    String confirm = "Sicuro di vole aggiornare il contenuto di \"%s\" con quello di \"%s\" ?";
 
 
     /**
