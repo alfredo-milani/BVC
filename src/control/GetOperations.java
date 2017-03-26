@@ -1,19 +1,15 @@
 package control;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.FalseFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import utility.Constants;
 
 import java.io.File;
 import java.io.IOException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.Date;
 import java.util.Scanner;
-
-import static utility.Constants.confirm;
 
 
 /**
@@ -23,13 +19,18 @@ public class GetOperations {
 
     private final String[] arg;
     private String[] ops;
-    private File sourceFile;
-    private File destinationFile;
+    private final File sourceFile;
+    private final File destinationFile;
     private String absoluteSourcePath;
     private String absoluteDestinationPath;
-    private String relativeCurrentSorcePath;
-    private String relativeCurrentDestinationPath;
-    private String pathTmp;
+    private final String relativeCurrentSourcePath;
+    private final String relativeCurrentDestinationPath;
+    private File relativeCurrentSourceFile;
+    private File relativeCurrentDestinationFile;
+    private File absoluteCurrentSourceFile;
+    private File absoluteCurrentDestinationFile;
+    private final String pathTmp;
+    private final File tmpFile;
 
     public GetOperations(String[] arg) {
         this.arg = arg;
@@ -49,11 +50,16 @@ public class GetOperations {
                     this.destinationFile.getAbsolutePath();
             e.printStackTrace();
         }
-        this.relativeCurrentSorcePath =
+        this.relativeCurrentSourcePath =
                 this.getRootDir(this.absoluteSourcePath);
         this.relativeCurrentDestinationPath =
                 this.getRootDir(this.absoluteDestinationPath);
+        this.relativeCurrentSourceFile = new File(this.relativeCurrentSourcePath);
+        this.relativeCurrentDestinationFile = new File(this.relativeCurrentDestinationPath);
+        this.absoluteCurrentSourceFile = new File(this.absoluteSourcePath);
+        this.absoluteCurrentDestinationFile = new File(this.absoluteDestinationPath);
         this.pathTmp = this.getDefaultTmpPath();
+        this.tmpFile = this.getTmpFile(this.pathTmp);
     }
 
 
@@ -105,9 +111,24 @@ public class GetOperations {
             w = path.split("\"");
 
         if (w != null)
-            return w[w.length - 1];
+            return "./" + w[w.length - 1];
 
         throw new RuntimeException(Constants.osDetectFailed);
+    }
+
+    private File getTmpFile(String path) {
+        int i = 0;
+        File tmpFile;
+
+        do {
+            ++i;
+            tmpFile = new File(path + i);
+        } while (tmpFile.exists());
+
+        if (!tmpFile.mkdir())
+            this.printToScreen("Errore nel creare la cartella dove spostare i files obsoleti");
+
+        return tmpFile;
     }
 
     public void performOp() {
@@ -119,61 +140,84 @@ public class GetOperations {
             return;
             */
 
+        try {
+            this.copyingFiles();
+        } catch (IOException e){
+            e.printStackTrace();
+            this.printToScreen("Errore IO");
+        }
+
         // consideriamo una sola funzione per ora:
         // quella di aggiornare la destinazione
-        Collection<File> sourceFile = FileUtils.listFilesAndDirs(
-                this.sourceFile, TrueFileFilter.INSTANCE, FalseFileFilter.INSTANCE
-        );
-        Collection<File> destinationFile = FileUtils.listFilesAndDirs(
-                this.sourceFile, TrueFileFilter.INSTANCE, FalseFileFilter.INSTANCE
-        );
-
-        this.printToScreen(this.absoluteSourcePath);
-        this.printFiles(sourceFile);
-        sourceFile.remove(
-          new File(this.relativeCurrentSorcePath)
-        );
-        destinationFile.remove(
-          new File(this.relativeCurrentDestinationPath)
-        );
-        this.printFiles(sourceFile);
 
 
-        // collection.stream().anyMatch(x -> x == f);
+        /*
+         * FileUtils.listFilesAndDir
+         * true - true  --> file e dir in modo ricorsivo
+         * false - true --> solo dir in modo ricorsivo
+         * false - false --> n'cazzo
+         * true - false  --> solo file non in modo ricorsivo
+         *
+         * FileUtils.listFiles
+         * true - true  --> files in modo ricorsivo
+         * true - false --> files non in modo ricorsivo
+         * false - false --> n'cazzo
+         * false - true  --> n'cazzo
+         */
 
 
-        for (File s : sourceFile) {
-            for (File d : destinationFile) {
-                //System.out.println("s: " + s + "\td: " + d);
 
-                if (!s.isDirectory() && !d.isDirectory()) {
-                    try {
+    }
 
-                        // boolean e = FileUtils.contentEquals(s, d);
-                        boolean e = FileUtils.contentEquals(new File("/home/alfredo/Scaricati/shm/prova1/dir1/file1"),
-                                new File("/home/alfredo/Scaricati/shm/prova2/dir1/file1"));
-                        //if (e)
-                            //System.out.println("madonna");
-                    } catch (IOException e1) {
-                        e1.printStackTrace();
+    private void copyingFiles() throws IOException {
+        File[] sF = this.sourceFile.listFiles();
+        File[] dF = this.destinationFile.listFiles();
+        if (sF == null || dF == null)    return;
+        ArrayList<File> sourceFiles = new ArrayList<>(Arrays.asList(sF));
+        ArrayList<File> destinationFiles = new ArrayList<>(Arrays.asList(dF));
+
+        for (File s : sourceFiles) {
+            if (s.isFile()) {
+                boolean copyFile = true;
+                for (File d : destinationFiles) {
+                    // Se nella cartella destinazione c'è un file
+                    // con lo stesso nome della cartella sorgente
+                    if (s.getName().equals(d.getName())) {
+                        if (!FileUtils.contentEquals(s, d)) {
+                            if (s.lastModified() > d.lastModified()) {
+                                FileUtils.moveFileToDirectory(d, this.tmpFile, false);
+                                copyFile = true;
+                            } else {
+                                // chiedere all'utente se aggiornare comunque il file oppure no
+                                copyFile = false;
+                                this.printToScreen("Il file \"" + d.getName() + "\" risulta essere stato modificato dopo del file \"" + s.getName() + "\"");
+                            }
+                        }
+                        destinationFiles.remove(d);
+                        break;
                     }
                 }
 
-                if (s.compareTo(d) == 0) {
-                    Date dateSource = new Date(s.lastModified());
-                    Date dateDestination = new Date(d.lastModified());
-
-                    DateFormat formatter = new SimpleDateFormat("HH:mm:ss:SSS");
-                    String dateFormattedSource = formatter.format(dateSource);
-                    String dateFormattedDestination = formatter.format(dateDestination);
-
-                    /*
-                    System.out.println("s: " + dateFormattedSource);
-                    System.out.println("s: " + dateFormattedDestination);
-                    */
+                if (copyFile) {
+                    try {
+                        FileUtils.copyFileToDirectory(s, this.absoluteCurrentDestinationFile);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
+            } else if (s.isDirectory()) {
+
             }
         }
+
+        for (File d : destinationFiles) {
+            if (d.isFile())
+                FileUtils.moveFileToDirectory(d, this.tmpFile, false);
+        }
+    }
+
+    private void opOnFiles() {
+
     }
 
     private File checker(String path) {
@@ -226,7 +270,7 @@ public class GetOperations {
     private boolean confirmOperation() {
         Scanner reader = new Scanner(System.in);
 
-        this.printToScreen(String.format(confirm, this.absoluteDestinationPath, this.absoluteSourcePath));
+        this.printToScreen(String.format(Constants.confirm, this.absoluteDestinationPath, this.absoluteSourcePath));
         this.printToScreen("(S/s -> Sì  -  N/n -> No)");
         String c = reader.next();
 

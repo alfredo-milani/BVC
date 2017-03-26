@@ -10,7 +10,6 @@ public class Main {
         GetOperations getOperations = new GetOperations(a);
         getOperations.performOp();
 
-
     }
 
 
