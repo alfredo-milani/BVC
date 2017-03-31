@@ -1,15 +1,11 @@
 package control;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.TrueFileFilter;
+import thread.Copying;
 import utility.Constants;
+import utility.FileUtility;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Scanner;
 
 
 /**
@@ -36,8 +32,15 @@ public class GetOperations {
         this.arg = arg;
         this.ops = new String[10]; // 5 argomenti
         this.ops = this.getOpType();
-        this.sourceFile = checker(this.ops[1]);
-        this.destinationFile = checker(this.ops[3]);
+        this.sourceFile = FileUtility.getFile(this.ops[1]);
+        this.destinationFile = FileUtility.getFile(this.ops[3]);
+        if (this.sourceFile == null ||
+                this.destinationFile == null) {
+            throw new RuntimeException(String.format(
+                    Constants.wrongPath,
+                    this.ops[1] + "   /   " + this.ops[3]
+            ));
+        }
         try {
             this.absoluteSourcePath =
                     this.sourceFile.getCanonicalPath();
@@ -126,7 +129,7 @@ public class GetOperations {
         } while (tmpFile.exists());
 
         if (!tmpFile.mkdir())
-            this.printToScreen("Errore nel creare la cartella dove spostare i files obsoleti");
+            FileUtility.printToScreen("Errore nel creare la cartella dove spostare i files obsoleti");
 
         return tmpFile;
     }
@@ -140,12 +143,23 @@ public class GetOperations {
             return;
             */
 
+
+        Runnable runnable = new Copying(
+                this.absoluteSourcePath,
+                this.absoluteDestinationPath,
+                this.pathTmp
+        );
+        Thread copyingThread = new Thread(runnable);
+        copyingThread.start();
+
         try {
-            this.copyingFiles();
-        } catch (IOException e){
+            copyingThread.join();
+        } catch (InterruptedException e) {
             e.printStackTrace();
-            this.printToScreen("Errore IO");
         }
+
+        FileUtility.printToScreen("Operazione completata con successo");
+
 
         // consideriamo una sola funzione per ora:
         // quella di aggiornare la destinazione
@@ -167,129 +181,6 @@ public class GetOperations {
 
 
 
-    }
-
-    private void copyingFiles() throws IOException {
-        File[] sF = this.sourceFile.listFiles();
-        File[] dF = this.destinationFile.listFiles();
-        if (sF == null || dF == null)    return;
-        ArrayList<File> sourceFiles = new ArrayList<>(Arrays.asList(sF));
-        ArrayList<File> destinationFiles = new ArrayList<>(Arrays.asList(dF));
-
-        for (File s : sourceFiles) {
-            if (s.isFile()) {
-                boolean copyFile = true;
-                for (File d : destinationFiles) {
-                    // Se nella cartella destinazione c'è un file
-                    // con lo stesso nome della cartella sorgente
-                    if (s.getName().equals(d.getName())) {
-                        if (!FileUtils.contentEquals(s, d)) {
-                            if (s.lastModified() > d.lastModified()) {
-                                FileUtils.moveFileToDirectory(d, this.tmpFile, false);
-                                copyFile = true;
-                            } else {
-                                // chiedere all'utente se aggiornare comunque il file oppure no
-                                copyFile = false;
-                                this.printToScreen("Il file \"" + d.getName() + "\" risulta essere stato modificato dopo del file \"" + s.getName() + "\"");
-                            }
-                        }
-                        destinationFiles.remove(d);
-                        break;
-                    }
-                }
-
-                if (copyFile) {
-                    try {
-                        FileUtils.copyFileToDirectory(s, this.absoluteCurrentDestinationFile);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            } else if (s.isDirectory()) {
-
-            }
-        }
-
-        for (File d : destinationFiles) {
-            if (d.isFile())
-                FileUtils.moveFileToDirectory(d, this.tmpFile, false);
-        }
-    }
-
-    private void opOnFiles() {
-
-    }
-
-    private File checker(String path) {
-        File file = new File(path);
-        if (!file.exists()) {
-            throw new RuntimeException(String.format(
-                    Constants.wrongPath, path
-            ));
-        }
-
-        return file;
-    }
-
-    private boolean canRead(File file) throws RuntimeException{
-        if (!file.canRead()) {
-            throw new RuntimeException(String.format(
-                    Constants.readDenied, file.getPath()
-            ));
-        }
-
-        return true;
-    }
-
-    private boolean canWrite(File file) throws RuntimeException{
-        if (!file.canWrite()) {
-            throw new RuntimeException(String.format(
-                    Constants.writeDenied, file.getParent()
-            ));
-        }
-
-        return true;
-    }
-
-    private void strcturalCorr(File source, File destination) {
-        Collection<File> filesDir = FileUtils.listFilesAndDirs(
-                source, TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE
-        );
-        this.printToScreen("\nDirectory Sorgente:\r");
-        for (File f : filesDir)
-            this.printToScreen(f.getAbsolutePath());
-
-        filesDir = FileUtils.listFilesAndDirs(
-                destination, TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE
-        );
-        this.printToScreen("\n\nDirectory di Destinazione:\r");
-        for (File f : filesDir)
-            this.printToScreen(f.getAbsolutePath());
-    }
-
-    private boolean confirmOperation() {
-        Scanner reader = new Scanner(System.in);
-
-        this.printToScreen(String.format(Constants.confirm, this.absoluteDestinationPath, this.absoluteSourcePath));
-        this.printToScreen("(S/s -> Sì  -  N/n -> No)");
-        String c = reader.next();
-
-        return c.equals("S") || c.equals("s");
-    }
-
-    private void printToScreen(String string) {
-        System.out.println(string);
-    }
-
-    private void printFiles(Collection<File> fileCollection) {
-        this.printToScreen("\n");
-        for (File f : fileCollection)
-            System.out.println("file: " + f);
-    }
-
-    private void printFiles(File[] files) {
-        for (File f : files)
-            System.out.println("file: " + f);
     }
 
 }
