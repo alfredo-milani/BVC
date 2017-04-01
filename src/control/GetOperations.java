@@ -138,8 +138,10 @@ public class GetOperations {
         if (this.ops.length == 0)
             throw new RuntimeException("Operazioni non definite!");
 
+        /*
         if (!FileUtility.confirmOperation(this.absoluteDestinationPath, this.absoluteSourcePath))
             return;
+            */
 
         Runnable runnable = new Copying(
                 this.absoluteSourcePath,

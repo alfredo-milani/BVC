@@ -69,11 +69,10 @@ public class Copying implements Runnable {
                 );
                 thread.start();
 
-                boolean delDir = false;
                 for (File d : destinationFiles) {
                     if (!d.isDirectory()) break;
                     if (d.getName().equals(s.getName()))
-                        sourceFiles.remove(s);
+                        destinationFiles.remove(d);
                 }
             } else if (s.isFile()) {
                 boolean copyFile = true;
@@ -133,17 +132,13 @@ public class Copying implements Runnable {
                     e.printStackTrace();
                 }
         }
-
-        sourceFiles = FileUtility.dropFiles(
-                sourceFiles
-        );
-        for (File d : sourceFiles) {
+        for (File d : destinationFiles) {
             if (!d.isDirectory()) break;
             try {
-                FileUtils.moveFileToDirectory(
+                FileUtils.moveToDirectory(
                         d,
                         this.tmpFile,
-                        true);
+                        false);
             } catch (IOException e) {
                 e.printStackTrace();
             }
