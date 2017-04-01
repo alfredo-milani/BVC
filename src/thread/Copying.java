@@ -17,12 +17,12 @@ public class Copying implements Runnable {
 
     private final String sourcePath;
     private final String destinationPath;
-    private final String tmpPath;
+    private final File tmpFile;
 
-    public Copying(String path1, String path2, String path3) {
+    public Copying(String path1, String path2, File file) {
         this.sourcePath = path1;
         this.destinationPath = path2;
-        this.tmpPath = path3;
+        this.tmpFile = file;
     }
 
     @Override
@@ -34,24 +34,51 @@ public class Copying implements Runnable {
         File fs = FileUtility.getFile(sourcePath);
         File fd = FileUtility.getFile(destinationPath);
         if (fs == null)
-            throw new RuntimeException("Wrong path: " + sourcePath);
-        else if (fd == null)
-            throw new RuntimeException("Wrong path: " + destinationPath);
+            throw new RuntimeException("Path errato: " + sourcePath);
+        else if (fd == null) {
+            fd = new File(destinationPath);
+            if (!fd.mkdir())
+                throw new RuntimeException("Impossibile creare la cartella: " + destinationPath);
+        }
         sF = FileUtility.dirFirst(fs.listFiles());
         dF = FileUtility.dirFirst(fd.listFiles());
 
         ArrayList<File> sourceFiles = new ArrayList<>(Arrays.asList(sF));
         ArrayList<File> destinationFiles = new ArrayList<>(Arrays.asList(dF));
 
-        Thread thread = new Thread(new Copying());
+        Thread thread = null;
 
+        /**
+         * RISOLVI MODIFICHE CONCORRENTI
+         */
         for (File s : sourceFiles) {
             if (s.isDirectory()) {
+                String newSource = s.getAbsolutePath();
+                String newDir = FileUtility.getNewDir(newSource);
+                char sep = FileUtility.getOSSeparator();
+                if (sep == ' ') {
+                    FileUtility.printToScreen("OS non riconoscibile. File: " + s);
+                    continue;
+                }
+                String newDestination = this.destinationPath + sep + newDir;
+
+                thread = new Thread(new Copying(
+                        newSource,
+                        newDestination,
+                        this.tmpFile)
+                );
                 thread.start();
+
+                boolean delDir = false;
+                for (File d : destinationFiles) {
+                    if (!d.isDirectory()) break;
+                    if (d.getName().equals(s.getName()))
+                        sourceFiles.remove(s);
+                }
             } else if (s.isFile()) {
                 boolean copyFile = true;
                 for (File d : FileUtils.listFiles(
-                        new File(this.destinationPath),
+                        FileUtility.getFile(this.destinationPath),
                         TrueFileFilter.INSTANCE,
                         FalseFileFilter.INSTANCE)) {
                     // Se nella cartella destinazione c'è un file
@@ -67,7 +94,7 @@ public class Copying implements Runnable {
                         if (!sameContent) {
                             if (s.lastModified() > d.lastModified()) {
                                 try {
-                                    FileUtils.moveFileToDirectory(d, new File(this.tmpPath), false);
+                                    FileUtils.moveFileToDirectory(d, this.tmpFile, false);
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
@@ -100,17 +127,35 @@ public class Copying implements Runnable {
                 try {
                     FileUtils.moveFileToDirectory(
                             d,
-                            new File(this.tmpPath),
+                            this.tmpFile,
                             false);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
         }
 
-        try {
-            thread.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        sourceFiles = FileUtility.dropFiles(
+                sourceFiles
+        );
+        for (File d : sourceFiles) {
+            if (!d.isDirectory()) break;
+            try {
+                FileUtils.moveFileToDirectory(
+                        d,
+                        this.tmpFile,
+                        true);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (thread != null) {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
+
 }

@@ -138,16 +138,13 @@ public class GetOperations {
         if (this.ops.length == 0)
             throw new RuntimeException("Operazioni non definite!");
 
-        /*
-        if (!this.confirmOperation())
+        if (!FileUtility.confirmOperation(this.absoluteDestinationPath, this.absoluteSourcePath))
             return;
-            */
-
 
         Runnable runnable = new Copying(
                 this.absoluteSourcePath,
                 this.absoluteDestinationPath,
-                this.pathTmp
+                this.tmpFile
         );
         Thread copyingThread = new Thread(runnable);
         copyingThread.start();
