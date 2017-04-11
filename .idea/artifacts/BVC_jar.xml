@@ -3,6 +3,7 @@
     <output-path>$PROJECT_DIR$/out/artifacts/BVC_jar</output-path>
     <root id="archive" name="BVC.jar">
       <element id="module-output" name="BVC" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/../../API/commons-io-2.5.jar" path-in-jar="/" />
     </root>
   </artifact>
 </component>

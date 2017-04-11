@@ -143,12 +143,12 @@ public class GetOperations {
             return;
             */
 
-        Runnable runnable = new Copying(
+        Runnable runnableCopy = new Copying(
                 this.absoluteSourcePath,
                 this.absoluteDestinationPath,
                 this.tmpFile
         );
-        Thread copyingThread = new Thread(runnable);
+        Thread copyingThread = new Thread(runnableCopy);
         copyingThread.start();
 
         try {

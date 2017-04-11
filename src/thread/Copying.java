@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 
 /**
  * Created by alfredo on 31/03/17.
@@ -46,11 +47,8 @@ public class Copying implements Runnable {
         ArrayList<File> sourceFiles = new ArrayList<>(Arrays.asList(sF));
         ArrayList<File> destinationFiles = new ArrayList<>(Arrays.asList(dF));
 
-        Thread thread = null;
+        ArrayList<Thread> threads = new ArrayList<>();
 
-        /**
-         * RISOLVI MODIFICHE CONCORRENTI
-         */
         for (File s : sourceFiles) {
             if (s.isDirectory()) {
                 String newSource = s.getAbsolutePath();
@@ -62,24 +60,34 @@ public class Copying implements Runnable {
                 }
                 String newDestination = this.destinationPath + sep + newDir;
 
-                thread = new Thread(new Copying(
+                Thread thread = new Thread(new Copying(
                         newSource,
                         newDestination,
                         this.tmpFile)
                 );
+                threads.add(thread);
                 thread.start();
 
-                for (File d : destinationFiles) {
+                // NOTA: aggiungere elementi nella lista, dopo aver inizializzato
+                //       l'iterator prova il lancio di una eccezione
+                Iterator<File> iteratorDF = destinationFiles.iterator();
+                while (iteratorDF.hasNext()) {
+                    File d = iteratorDF.next();
                     if (!d.isDirectory()) break;
                     if (d.getName().equals(s.getName()))
-                        destinationFiles.remove(d);
+                        iteratorDF.remove();
                 }
             } else if (s.isFile()) {
                 boolean copyFile = true;
-                for (File d : FileUtils.listFiles(
+                // NOTA: aggiungere elementi nella lista, dopo aver inizializzato
+                //       l'iterator prova il lancio di una eccezione
+                Iterator<File> iteratorDF = FileUtils.listFiles(
                         FileUtility.getFile(this.destinationPath),
                         TrueFileFilter.INSTANCE,
-                        FalseFileFilter.INSTANCE)) {
+                        FalseFileFilter.INSTANCE
+                ).iterator();
+                while (iteratorDF.hasNext()){
+                    File d = iteratorDF.next();
                     // Se nella cartella destinazione c'è un file
                     // con lo stesso nome della cartella sorgente
                     if (s.getName().equals(d.getName())) {
@@ -104,8 +112,9 @@ public class Copying implements Runnable {
                                 FileUtility.printToScreen("Il file \"" + d.getName() + "\" risulta essere stato modificato dopo del file \"" + s.getName() + "\"");
                             }
                         }
-                        destinationFiles.remove(d);
+                        iteratorDF.remove();
                         break;
+
                     }
                 }
 
@@ -122,7 +131,7 @@ public class Copying implements Runnable {
         }
 
         for (File d : destinationFiles) {
-            if (d.isFile())
+            if (d.isFile()) {
                 try {
                     FileUtils.moveFileToDirectory(
                             d,
@@ -131,24 +140,25 @@ public class Copying implements Runnable {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-        }
-        for (File d : destinationFiles) {
-            if (!d.isDirectory()) break;
-            try {
-                FileUtils.moveToDirectory(
-                        d,
-                        this.tmpFile,
-                        false);
-            } catch (IOException e) {
-                e.printStackTrace();
+            } else if (d.isDirectory()) {
+                try {
+                    FileUtils.moveToDirectory(
+                            d,
+                            this.tmpFile,
+                            false);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
 
-        if (thread != null) {
-            try {
-                thread.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+        for (Thread thread : threads) {
+            if (thread != null) {
+                try {
+                    thread.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
