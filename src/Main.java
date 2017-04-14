@@ -16,6 +16,7 @@ public class Main {
 
 
 /*
+        // PROVA ITERATOR
         ArrayList<String> s = new ArrayList<>();s.add("dio"); s.add("cane"); s.add("madonna");
         Iterator<String> f = s.iterator();
 
@@ -33,6 +34,16 @@ public class Main {
         }
 
         System.out.println("len: " + s.size());
+
+
+
+
+        // PROVA ENUM
+        String k = Operations.Destination.toString();
+        Operations l = Enum.valueOf(Operations.class, "Update");
+        if (l == Operations.Update)
+            System.out.println("prova enum");
+
         */
 
 

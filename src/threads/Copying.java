@@ -1,4 +1,4 @@
-package thread;
+package threads;
 
 import org.apache.commons.io.FileUtils;
 import utility.FileUtility;

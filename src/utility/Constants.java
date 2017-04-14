@@ -12,6 +12,8 @@ public interface Constants {
     /**
      * STRINGS
      */
+    String notImplemented = "Non ancora implementato";
+    String badRequest = "Richiesta incoprensibile";
     String defaultMsg = "\n" +
             "***\t" +
             "Sintassi: \"./BVC /path/../source [-param | -param /path/../destination]\"" +
@@ -22,6 +24,8 @@ public interface Constants {
     String writeDenied = "Accesso in scrittura non consentito per il path: %s";
     String osDetectFailed = "Impossibile determinare il tipo di OS per la determinazione della sintassi dei path dei files";
     String confirm = "Sicuro di vole aggiornare il contenuto di \"%s\" con quello di \"%s\" ?";
+    String missingOp = "Operazione mancante";
+
 
 
     /**

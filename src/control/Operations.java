@@ -5,7 +5,5 @@ package control;
  */
 public enum Operations {
     Update,
-    Differences,
-    Source,
-    Destination
+    Differences
 }

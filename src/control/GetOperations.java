@@ -1,6 +1,6 @@
 package control;
 
-import thread.Copying;
+import threads.Copying;
 import utility.Constants;
 import utility.FileUtility;
 
@@ -15,8 +15,8 @@ public class GetOperations {
 
     private final String[] arg;
     private String[] ops;
-    private final File sourceFile;
-    private final File destinationFile;
+    private File sourceFile;
+    private File destinationFile;
     private String absoluteSourcePath;
     private String absoluteDestinationPath;
     private final String relativeCurrentSourcePath;
@@ -32,15 +32,6 @@ public class GetOperations {
         this.arg = arg;
         this.ops = new String[10]; // 5 argomenti
         this.ops = this.getOpType();
-        this.sourceFile = FileUtility.getFile(this.ops[1]);
-        this.destinationFile = FileUtility.getFile(this.ops[3]);
-        if (this.sourceFile == null ||
-                this.destinationFile == null) {
-            throw new RuntimeException(String.format(
-                    Constants.wrongPath,
-                    this.ops[1] + "   /   " + this.ops[3]
-            ));
-        }
         try {
             this.absoluteSourcePath =
                     this.sourceFile.getCanonicalPath();
@@ -72,25 +63,48 @@ public class GetOperations {
      * @return array di stringhe del tipo: [tipoOperazione (enum); valore (path, o simili)]
      */
     private String[] getOpType() {
-        if (this.arg.length == 0)
-            throw new RuntimeException(Constants.defaultMsg);
+        switch (this.arg.length) {
+            case 0:
+                throw new RuntimeException(Constants.defaultMsg);
 
-        int lenArg = this.arg.length;
-        String k = Operations.Destination.toString();
-        Operations l = Enum.valueOf(Operations.class, "Update");
-        if (l == Operations.Update)
-            System.out.println("prova enum");
+            case 1:
+                throw new RuntimeException(Constants.notImplemented);
 
-        this.ops[0] = Operations.Source.toString();
-        this.ops[1] = this.arg[0];
-        for (int i = 1, j = 2; i <= lenArg - 1; ++i) {
-            if (this.arg[i].equals("-u")) {
-                this.ops[j] = Operations.Update.toString();
-                this.ops[++j] = this.arg[++i];
-            } else if (this.arg[i].equals("-diff")) {
-                this.ops[j] = Operations.Differences.toString();
-                this.ops[++j] = this.arg[++i];
-            }
+            case 2:
+                throw new RuntimeException(Constants.notImplemented);
+
+            case 3:
+                this.ops[0] = PathType.Source.toString();
+                this.ops[1] = this.arg[0];
+                if ((this.sourceFile = FileUtility.getFile(this.ops[1])) == null)
+                    throw new RuntimeException(
+                            String.format(Constants.wrongPath, this.ops[1])
+                    );
+                boolean operation = false;
+                for (int i = 1, j = 2; i <= this.arg.length - 1; ++i) {
+                    if (this.arg[i].equals("-u")) {
+                        this.ops[j] = Operations.Update.toString();
+                        this.ops[++j] = this.arg[++i];
+                        operation = true;
+                    } else if (this.arg[i].equals("-diff")) {
+                        this.ops[j] = Operations.Differences.toString();
+                        this.ops[++j] = this.arg[++i];
+                        operation = true;
+                    }
+                }
+                if (!operation)
+                    throw new RuntimeException(Constants.missingOp);
+                else if ((this.destinationFile = FileUtility.getFile(this.ops[3])) == null)
+                    throw new RuntimeException(
+                            String.format(Constants.wrongPath, this.ops[3])
+                    );
+                break;
+
+            case 4:
+                throw new RuntimeException(Constants.notImplemented);
+
+            default:
+                throw new RuntimeException(Constants.badRequest);
         }
 
         return this.ops;
