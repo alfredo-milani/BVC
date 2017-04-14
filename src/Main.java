@@ -13,6 +13,8 @@ public class Main {
         GetOperations getOperations = new GetOperations(a);
         getOperations.performOp();
 
+
+
 /*
         ArrayList<String> s = new ArrayList<>();s.add("dio"); s.add("cane"); s.add("madonna");
         Iterator<String> f = s.iterator();
@@ -25,8 +27,14 @@ public class Main {
                 f.remove();
         }
 
+        f = s.iterator();
+        while (f.hasNext()) {
+            System.out.println(f.next());
+        }
+
         System.out.println("len: " + s.size());
         */
+
 
     }
 

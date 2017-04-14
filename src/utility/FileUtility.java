@@ -43,16 +43,16 @@ public class FileUtility {
     }
 
     public static File[] dirFirst(File[] dir) {
-        int len = dir.length;
-        for (int i = 0, j = len - 1; i < j; --j) {
-            File tmpFile;
+        for (int i = 0, j = dir.length - 1; i < j; ++i) {
             if (!dir[i].isDirectory()) {
-                if (!dir[j].isDirectory())
-                    continue;
-                tmpFile = dir[j];
-                dir[j] = dir[i];
-                dir[i] = tmpFile;
-                ++i;
+                for (; i < j; --j) {
+                    if (dir[j].isDirectory()) {
+                        File tmpFile = dir[j];
+                        dir[j] = dir[i];
+                        dir[i] = tmpFile;
+                        break;
+                    }
+                }
             }
         }
 
