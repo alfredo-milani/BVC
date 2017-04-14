@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 
-p
 /**
  * Created by alfredo on 31/03/17.
  */
@@ -17,38 +16,37 @@ public class Copying implements Runnable {
 
     private final String sourcePath;
     private final String destinationPath;
+    private File destinationFile;
+    private File sourceFile;
     private final File tmpFile;
 
     public Copying(String path1, String path2, File file) {
         this.sourcePath = path1;
         this.destinationPath = path2;
         this.tmpFile = file;
+        this.destinationFile =
+                FileUtility.getFile(this.destinationPath);
+        this.sourceFile =
+                FileUtility.getFile(this.sourcePath);
     }
 
     @Override
     public void run() {
-        if (this.sourcePath == null ||
-                this.destinationPath == null) return;
-
         File[] sF; File[] dF;
-        File fs = FileUtility.getFile(sourcePath);
-        File fd = FileUtility.getFile(destinationPath);
-        if (fs == null)
-            throw new RuntimeException("Path errato: " + sourcePath);
-        else if (fd == null) {
-            fd = new File(destinationPath);
-            if (!fd.mkdir())
+        if (this.sourceFile == null) throw new RuntimeException("Path errato: " + sourcePath);
+        else if (this.destinationFile == null) {
+            this.destinationFile = new File(destinationPath);
+            if (!this.destinationFile.mkdir())
                 throw new RuntimeException("Impossibile creare la cartella: " + destinationPath);
         }
-        sF = FileUtility.dirFirst(fs.listFiles());
-        dF = FileUtility.dirFirst(fd.listFiles());
+        sF = FileUtility.dirFirst(this.sourceFile.listFiles());
+        dF = FileUtility.dirFirst(this.destinationFile.listFiles());
 
         ArrayList<File> sourceFiles = new ArrayList<>(Arrays.asList(sF));
         ArrayList<File> destinationFiles = new ArrayList<>(Arrays.asList(dF));
         // NOTA: aggiungere elementi nella lista, dopo aver inizializzato
         //       l'iterator prova il lancio di una eccezione
         Iterator<File> iteratorDF;
-        Iterator<File> iteratorSF = sourceFiles.iterator();
         // destinationFiles con il metodo sotto conterrà tutti e soli i files regolari
         // destinationFiles.removeIf(File::isDirectory);
 
@@ -84,50 +82,50 @@ public class Copying implements Runnable {
                     }
                 }
             } else if (s.isFile()) {
-                boolean copyFile = true;
-                // oppure ordina destinationFiles al contrario (prima files e poi dirs) e fai break quando trovi la prima dir
+                // Se nessuno dei nomi di files in source ha un matching
+                //  nella directory destination, il file viene copiato
+                boolean copyToDest = true;
                 iteratorDF = destinationFiles.iterator();
-                while (iteratorDF.hasNext()){
+                while (iteratorDF.hasNext()) {
                     File d = iteratorDF.next();
-                    if (d.isDirectory()) continue;
-                    // Se nella cartella destinazione c'è un file
-                    // con lo stesso nome della cartella sorgente
-                    if (s.getName().equals(d.getName())) {
+                    if (s.getName().equals(this.destinationFile.getName())) {
                         boolean sameContent = false;
                         try {
                             sameContent = FileUtils.contentEquals(s, d);
                         } catch (IOException e) {
                             e.printStackTrace();
-                            FileUtility.printToScreen("Errore nell'analizzare il file: " + d);
                         }
-                        if (sameContent) {
-                            copyFile = false;
-                        } else {
+                        if (!sameContent) {
                             if (s.lastModified() > d.lastModified()) {
                                 try {
-                                    FileUtils.moveFileToDirectory(d,
+                                    FileUtils.moveFileToDirectory(
+                                            d,
                                             this.tmpFile,
-                                            false
-                                    );
+                                            false);
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
-                                copyFile = true;
+                                iteratorDF.remove();
+                                break;
                             } else {
-                                // chiedere all'utente se aggiornare comunque il file oppure no
-                                copyFile = false;
-                                FileUtility.printToScreen("Il file \"" + d.getName() + "\" risulta essere stato modificato dopo del file \"" + s.getName() + "\"");
+                                System.out.println(String.format("File '%s' modificato: %d\n" +
+                                        "File '%s' modificato: %d\n\n" +
+                                        "Feature da completare", s.getName(), s.lastModified(),
+                                        d.getName(), d.lastModified()));
                             }
                         }
+                        copyToDest = false;
                         iteratorDF.remove();
                         break;
-
                     }
                 }
 
-                if (copyFile) {
+                if (copyToDest) {
                     try {
-                        FileUtils.copyFileToDirectory(s, new File(this.destinationPath));
+                        FileUtils.moveFileToDirectory(
+                                s,
+                                this.destinationFile,
+                                false);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -141,6 +139,9 @@ public class Copying implements Runnable {
         //
         // Files e cartelle rimanste nella lista destinationFiles sono
         //  sono spostati nella directory temporanea per essere eliminati
+        // Fino a quando non confronto tutti i files contenuti in source,
+        //  non posso spostare i file in destination altrimenti rischierei
+        //  di copiare inutilmente un file
         for (File d : destinationFiles) {
             if (d.isFile()) {
                 try {
