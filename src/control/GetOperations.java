@@ -171,7 +171,7 @@ public class GetOperations {
             e.printStackTrace();
         }
 
-        FileUtility.printToScreen("Operazione completata con successo");
+        FileUtility.printToScreen("\n\nOperazione completata con successo");
 
 
         // consideriamo una sola funzione per ora:

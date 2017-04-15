@@ -14,6 +14,7 @@ import java.util.Iterator;
  */
 public class Copying implements Runnable {
 
+    private static int numberOfThreads = 0;
     private final String sourcePath;
     private final String destinationPath;
     private File destinationFile;
@@ -21,6 +22,8 @@ public class Copying implements Runnable {
     private final File tmpFile;
 
     public Copying(String path1, String path2, File file) {
+        Copying.countAndPrint('a');
+
         this.sourcePath = path1;
         this.destinationPath = path2;
         this.tmpFile = file;
@@ -28,6 +31,23 @@ public class Copying implements Runnable {
                 FileUtility.getFile(this.destinationPath);
         this.sourceFile =
                 FileUtility.getFile(this.sourcePath);
+    }
+
+    private synchronized static void countAndPrint(char operation) {
+        switch (operation) {
+            case 'a':
+                ++Copying.numberOfThreads;
+                break;
+
+            case 'd':
+                --Copying.numberOfThreads;
+                break;
+        }
+
+        System.out.print(
+                "\rNumber of current threads: " +
+                        Copying.numberOfThreads
+        );
     }
 
     @Override
@@ -47,12 +67,15 @@ public class Copying implements Runnable {
         // NOTA: aggiungere elementi nella lista, dopo aver inizializzato
         //       l'iterator prova il lancio di una eccezione
         Iterator<File> iteratorDF;
+        Iterator<File> iteratorSF;
         // destinationFiles con il metodo sotto conterrà tutti e soli i files regolari
         // destinationFiles.removeIf(File::isDirectory);
 
         ArrayList<Thread> threads = new ArrayList<>();
 
-        for (File s : sourceFiles) {
+        iteratorSF = sourceFiles.iterator();
+        while (iteratorSF.hasNext()){
+            File s = iteratorSF.next();
             if (s.isDirectory()) {
                 String newSource = s.getAbsolutePath();
                 String newDir = FileUtility.getNewDir(newSource);
@@ -63,21 +86,20 @@ public class Copying implements Runnable {
                 }
                 String newDestination = this.destinationPath + sep + newDir;
 
-
-                Thread thread = new Thread(new Copying(
-                        newSource,
-                        newDestination,
-                        this.tmpFile)
-                );
-                threads.add(thread);
-                thread.start();
-
                 iteratorDF = destinationFiles.iterator();
                 while (iteratorDF.hasNext()) {
                     File d = iteratorDF.next();
                     if (!d.isDirectory()) break;
                     if (d.getName().equals(s.getName())) {
+                        iteratorSF.remove();
                         iteratorDF.remove();
+                        Thread thread = new Thread(new Copying(
+                                newSource,
+                                newDestination,
+                                this.tmpFile)
+                        );
+                        threads.add(thread);
+                        thread.start();
                         break;
                     }
                 }
@@ -88,7 +110,8 @@ public class Copying implements Runnable {
                 iteratorDF = destinationFiles.iterator();
                 while (iteratorDF.hasNext()) {
                     File d = iteratorDF.next();
-                    if (s.getName().equals(this.destinationFile.getName())) {
+                    if (d.isDirectory()) continue;
+                    if (s.getName().equals(d.getName())) {
                         boolean sameContent = false;
                         try {
                             sameContent = FileUtils.contentEquals(s, d);
@@ -98,10 +121,9 @@ public class Copying implements Runnable {
                         if (!sameContent) {
                             if (s.lastModified() > d.lastModified()) {
                                 try {
-                                    FileUtils.moveFileToDirectory(
-                                            d,
+                                    FileUtils.copyFileToDirectory(d,
                                             this.tmpFile,
-                                            false);
+                                            true);
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
@@ -122,10 +144,10 @@ public class Copying implements Runnable {
 
                 if (copyToDest) {
                     try {
-                        FileUtils.moveFileToDirectory(
+                        FileUtils.copyFileToDirectory(
                                 s,
                                 this.destinationFile,
-                                false);
+                                true);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -164,6 +186,18 @@ public class Copying implements Runnable {
             }
         }
 
+        for (File s : sourceFiles) {
+            if (s.isDirectory()) {
+                try {
+                    FileUtils.copyDirectoryToDirectory(
+                            s,
+                            this.destinationFile);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
         for (Thread thread : threads) {
             if (thread != null) {
                 try {
@@ -173,6 +207,8 @@ public class Copying implements Runnable {
                 }
             }
         }
+
+        Copying.countAndPrint('d');
     }
 
 }
