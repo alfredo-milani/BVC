@@ -13,6 +13,9 @@ public class Main {
         GetOperations getOperations = new GetOperations(a);
         getOperations.performOp();
 
+
+
+
 /*
         // PROVA ITERATOR
         ArrayList<String> s = new ArrayList<>();s.add("dio"); s.add("cane"); s.add("madonna");

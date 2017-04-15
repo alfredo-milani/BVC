@@ -160,7 +160,8 @@ public class GetOperations {
         Runnable runnableCopy = new Copying(
                 this.absoluteSourcePath,
                 this.absoluteDestinationPath,
-                this.tmpFile
+                this.tmpFile.getAbsolutePath(),
+                ""
         );
         Thread copyingThread = new Thread(runnableCopy);
         copyingThread.start();

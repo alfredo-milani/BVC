@@ -59,6 +59,18 @@ public class FileUtility {
         return dir;
     }
 
+    public static String rmSep(String str) {
+        if (str.length() == 0) return "";
+
+        int i = 0, j = str.length();
+        if (str.charAt(i) == '/' ||
+                str.charAt(i) == '\"') ++i;
+        if (str.charAt(j - 1) == '/' ||
+                str.charAt(j - 1) == '\"') --j;
+
+        return str.substring(i, j);
+    }
+
     public static ArrayList<File> dropFiles(ArrayList<File> dir) {
         int len = dir.size();
         for (int i = 0; i < len; ++i)

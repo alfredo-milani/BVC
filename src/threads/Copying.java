@@ -15,18 +15,22 @@ import java.util.Iterator;
 public class Copying implements Runnable {
 
     private static int numberOfThreads = 0;
+
+    private final String currentBranch;
     private final String sourcePath;
     private final String destinationPath;
+    private final String tmpPath;
     private File destinationFile;
     private File sourceFile;
-    private final File tmpFile;
 
-    public Copying(String path1, String path2, File file) {
+    public Copying(String path1, String path2,
+                   String path3, String currentBranch) {
         Copying.countAndPrint('a');
 
+        this.currentBranch = currentBranch;
         this.sourcePath = path1;
         this.destinationPath = path2;
-        this.tmpFile = file;
+        this.tmpPath = path3;
         this.destinationFile =
                 FileUtility.getFile(this.destinationPath);
         this.sourceFile =
@@ -45,8 +49,8 @@ public class Copying implements Runnable {
         }
 
         System.out.print(
-                "\rNumber of current threads: " +
-                        Copying.numberOfThreads
+                "\r " + Copying.numberOfThreads +
+                        "  threads created"
         );
     }
 
@@ -96,7 +100,11 @@ public class Copying implements Runnable {
                         Thread thread = new Thread(new Copying(
                                 newSource,
                                 newDestination,
-                                this.tmpFile)
+                                this.tmpPath,
+                                FileUtility.rmSep(this.currentBranch) +
+                                        FileUtility.getOSSeparator() +
+                                        newDir +
+                        FileUtility.getOSSeparator())
                         );
                         threads.add(thread);
                         thread.start();
@@ -122,7 +130,7 @@ public class Copying implements Runnable {
                             if (s.lastModified() > d.lastModified()) {
                                 try {
                                     FileUtils.copyFileToDirectory(d,
-                                            this.tmpFile,
+                                            new File(this.tmpPath),
                                             true);
                                 } catch (IOException e) {
                                     e.printStackTrace();
@@ -165,21 +173,32 @@ public class Copying implements Runnable {
         //  non posso spostare i file in destination altrimenti rischierei
         //  di copiare inutilmente un file
         for (File d : destinationFiles) {
+            File tmpFile = new File(FileUtility.getOSSeparator() +
+                    FileUtility.rmSep(this.tmpPath) +
+                    FileUtility.getOSSeparator() +
+                    FileUtility.rmSep(this.currentBranch));
+            if (!tmpFile.exists()) {
+                if (!tmpFile.mkdir())
+                    FileUtility.printToScreen("Errore nel creare la cartella dove spostare i files obsoleti" +
+                            "\tpath: " + tmpFile);
+            }
+            if (!d.exists()) {
+                if (!d.mkdir())
+                    FileUtility.printToScreen("Errore nel creare la cartella dove spostare i files obsoleti" +
+                            "\tpath: " + d);
+            }
+
             if (d.isFile()) {
                 try {
                     FileUtils.moveFileToDirectory(
-                            d,
-                            this.tmpFile,
-                            false);
+                            d, tmpFile, false);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             } else if (d.isDirectory()) {
                 try {
                     FileUtils.moveToDirectory(
-                            d,
-                            this.tmpFile,
-                            false);
+                            d, tmpFile, false);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
