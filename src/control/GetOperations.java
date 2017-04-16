@@ -157,11 +157,15 @@ public class GetOperations {
             return;
             */
 
+
+        // branch ThreadLimit:
+        //      4° argomento è il numero limite di threads --> opzione -t n ancora da implementare
         Runnable runnableCopy = new Copying(
                 this.absoluteSourcePath,
                 this.absoluteDestinationPath,
                 this.tmpFile.getAbsolutePath(),
-                ""
+                "",
+                30
         );
         Thread copyingThread = new Thread(runnableCopy);
         copyingThread.start();

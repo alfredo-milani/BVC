@@ -15,6 +15,9 @@ import java.util.Iterator;
 public class Copying implements Runnable {
 
     private static int numberOfThreads = 0;
+    //  0 --> comportamento di default -> nessun limite
+    // >0 --> limite alla creazione dei threads
+    private final int threshold;
 
     private final String currentBranch;
     private final String sourcePath;
@@ -24,9 +27,11 @@ public class Copying implements Runnable {
     private File sourceFile;
 
     public Copying(String path1, String path2,
-                   String path3, String currentBranch) {
+                   String path3, String currentBranch,
+                   int threshold) {
         Copying.countAndPrint('a');
 
+        this.threshold = threshold;
         this.currentBranch = currentBranch;
         this.sourcePath = path1;
         this.destinationPath = path2;
@@ -52,6 +57,21 @@ public class Copying implements Runnable {
                 "\r " + Copying.numberOfThreads +
                         "  threads created"
         );
+    }
+
+    private void waitThreadDeath() {
+        if (this.threshold > 0) {
+            synchronized (this) {
+                if (Copying.numberOfThreads == this.threshold) {
+                    try {
+                        this.wait();
+                    } catch (InterruptedException e){
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+
     }
 
     @Override
@@ -90,6 +110,8 @@ public class Copying implements Runnable {
                 }
                 String newDestination = this.destinationPath + sep + newDir;
 
+                this.waitThreadDeath();
+
                 iteratorDF = destinationFiles.iterator();
                 while (iteratorDF.hasNext()) {
                     File d = iteratorDF.next();
@@ -104,7 +126,8 @@ public class Copying implements Runnable {
                                 FileUtility.rmSep(this.currentBranch) +
                                         FileUtility.getOSSeparator() +
                                         newDir +
-                        FileUtility.getOSSeparator())
+                        FileUtility.getOSSeparator(),
+                                this.threshold)
                         );
                         threads.add(thread);
                         thread.start();
@@ -228,6 +251,7 @@ public class Copying implements Runnable {
         }
 
         Copying.countAndPrint('d');
+        this.notify();
     }
 
 }
