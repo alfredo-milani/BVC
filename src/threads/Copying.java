@@ -81,6 +81,7 @@ public class Copying implements Runnable {
         while (iteratorSF.hasNext()){
             File s = iteratorSF.next();
             if (s.isDirectory()) {
+                // TODO --> porta la creazione dei threads dentro
                 String newSource = s.getAbsolutePath();
                 String newDir = FileUtility.getNewDir(newSource);
                 char sep = FileUtility.getOSSeparator();
