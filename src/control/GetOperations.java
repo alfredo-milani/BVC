@@ -143,6 +143,8 @@ public class GetOperations {
             return;
             */
 
+
+        // TODO --> aggiungi opzione -t numThreads
         Runnable runnableCopy = new Copying(
                 this.absoluteSourcePath,
                 this.absoluteDestinationPath,
