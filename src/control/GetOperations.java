@@ -6,6 +6,9 @@ import utility.FileUtility;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 
 /**
@@ -133,17 +136,23 @@ public class GetOperations {
         throw new RuntimeException(Constants.osDetectFailed);
     }
 
-    private File getTmpFile(String path) {
+    private File getTmpFile(String strPath) {
         int i = 0;
         File tmpFile;
 
         do {
             ++i;
-            tmpFile = new File(path + i);
+            tmpFile = new File(strPath + i);
         } while (tmpFile.exists());
 
-        if (!tmpFile.mkdir())
-            FileUtility.printToScreen("Errore nel creare la cartella dove spostare i files obsoleti");
+        Path path = Paths.get(strPath + i);
+        if (!Files.exists(path)) {
+            try {
+                Files.createDirectories(path);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 
         return tmpFile;
     }

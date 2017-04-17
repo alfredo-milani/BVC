@@ -5,6 +5,9 @@ import utility.FileUtility;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -71,18 +74,14 @@ public class Copying implements Runnable {
         // NOTA: aggiungere elementi nella lista, dopo aver inizializzato
         //       l'iterator prova il lancio di una eccezione
         Iterator<File> iteratorDF;
-        Iterator<File> iteratorSF;
         // destinationFiles con il metodo sotto conterrà tutti e soli i files regolari
         // destinationFiles.removeIf(File::isDirectory);
 
         ArrayList<Thread> threads = new ArrayList<>();
 
-        iteratorSF = sourceFiles.iterator();
-        while (iteratorSF.hasNext()) {
+        for (File s : sourceFiles) {
             boolean copyToDest = true;
-            File s = iteratorSF.next();
             if (s.isDirectory()) {
-                // TODO: rendi creazione threads indipendente dall'operazione
                 String newSource = s.getAbsolutePath();
                 String newDir = FileUtility.getNewDir(newSource);
                 char sep = FileUtility.getOSSeparator();
@@ -92,37 +91,25 @@ public class Copying implements Runnable {
                 }
                 String newDestination = this.destinationPath + sep + newDir;
 
-                // TODO --> metti 2 while fuori e detro i rami dir e file
+                Thread thread = new Thread(new Copying(
+                        newSource,
+                        newDestination,
+                        this.tmpPath,
+                        FileUtility.rmSep(this.currentBranch) +
+                                FileUtility.getOSSeparator() +
+                                newDir +
+                                FileUtility.getOSSeparator())
+                );
+                threads.add(thread);
+                thread.start();
+
                 iteratorDF = destinationFiles.iterator();
                 while (iteratorDF.hasNext()) {
                     File d = iteratorDF.next();
                     if (!d.isDirectory()) break;
                     if (d.getName().equals(s.getName())) {
-                        copyToDest = false;
-                        iteratorSF.remove();
                         iteratorDF.remove();
-                        Thread thread = new Thread(new Copying(
-                                newSource,
-                                newDestination,
-                                this.tmpPath,
-                                FileUtility.rmSep(this.currentBranch) +
-                                        FileUtility.getOSSeparator() +
-                                        newDir +
-                        FileUtility.getOSSeparator())
-                        );
-                        threads.add(thread);
-                        thread.start();
                         break;
-                    }
-                }
-
-                if (copyToDest) {
-                    try {
-                        FileUtils.copyDirectoryToDirectory(
-                                s,
-                                this.destinationFile);
-                    } catch (IOException e) {
-                        e.printStackTrace();
                     }
                 }
 
@@ -188,28 +175,29 @@ public class Copying implements Runnable {
         //  non posso spostare i file in destination altrimenti rischierei
         //  di copiare inutilmente un file
         for (File d : destinationFiles) {
-            // TODO --> aggiusta path tmpPath
-            File tmpFile = new File(FileUtility.getOSSeparator() +
+            Path path = Paths.get(FileUtility.getOSSeparator() +
                     FileUtility.rmSep(this.tmpPath) +
                     FileUtility.getOSSeparator() +
                     FileUtility.rmSep(this.currentBranch));
-            if (!tmpFile.exists()) {
-                if (!tmpFile.mkdir())
-                    FileUtility.printToScreen("Errore nel creare la cartella dove spostare i files obsoleti" +
-                            "\tpath: " + tmpFile);
+            if (!Files.exists(path)) {
+                try {
+                    Files.createDirectories(path);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
 
             if (d.isFile()) {
                 try {
                     FileUtils.moveFileToDirectory(
-                            d, tmpFile, false);
+                            d, path.toFile(), false);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             } else if (d.isDirectory()) {
                 try {
                     FileUtils.moveToDirectory(
-                            d, tmpFile, false);
+                            d, path.toFile(), false);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
