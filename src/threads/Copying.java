@@ -25,7 +25,7 @@ public class Copying implements Runnable {
 
     public Copying(String path1, String path2,
                    String path3, String currentBranch) {
-        Copying.countAndPrint('a');
+        Copying.countAndPrint('+');
 
         this.currentBranch = currentBranch;
         this.sourcePath = path1;
@@ -39,11 +39,11 @@ public class Copying implements Runnable {
 
     private synchronized static void countAndPrint(char operation) {
         switch (operation) {
-            case 'a':
+            case '+':
                 ++Copying.numberOfThreads;
                 break;
 
-            case 'd':
+            case '-':
                 --Copying.numberOfThreads;
                 break;
         }
@@ -78,7 +78,8 @@ public class Copying implements Runnable {
         ArrayList<Thread> threads = new ArrayList<>();
 
         iteratorSF = sourceFiles.iterator();
-        while (iteratorSF.hasNext()){
+        while (iteratorSF.hasNext()) {
+            boolean copyToDest = true;
             File s = iteratorSF.next();
             if (s.isDirectory()) {
                 // TODO: rendi creazione threads indipendente dall'operazione
@@ -91,11 +92,13 @@ public class Copying implements Runnable {
                 }
                 String newDestination = this.destinationPath + sep + newDir;
 
+                // TODO --> metti 2 while fuori e detro i rami dir e file
                 iteratorDF = destinationFiles.iterator();
                 while (iteratorDF.hasNext()) {
                     File d = iteratorDF.next();
                     if (!d.isDirectory()) break;
                     if (d.getName().equals(s.getName())) {
+                        copyToDest = false;
                         iteratorSF.remove();
                         iteratorDF.remove();
                         Thread thread = new Thread(new Copying(
@@ -112,10 +115,21 @@ public class Copying implements Runnable {
                         break;
                     }
                 }
+
+                if (copyToDest) {
+                    try {
+                        FileUtils.copyDirectoryToDirectory(
+                                s,
+                                this.destinationFile);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+
             } else if (s.isFile()) {
                 // Se nessuno dei nomi di files in source ha un matching
                 //  nella directory destination, il file viene copiato
-                boolean copyToDest = true;
                 iteratorDF = destinationFiles.iterator();
                 while (iteratorDF.hasNext()) {
                     File d = iteratorDF.next();
@@ -174,6 +188,7 @@ public class Copying implements Runnable {
         //  non posso spostare i file in destination altrimenti rischierei
         //  di copiare inutilmente un file
         for (File d : destinationFiles) {
+            // TODO --> aggiusta path tmpPath
             File tmpFile = new File(FileUtility.getOSSeparator() +
                     FileUtility.rmSep(this.tmpPath) +
                     FileUtility.getOSSeparator() +
@@ -182,11 +197,6 @@ public class Copying implements Runnable {
                 if (!tmpFile.mkdir())
                     FileUtility.printToScreen("Errore nel creare la cartella dove spostare i files obsoleti" +
                             "\tpath: " + tmpFile);
-            }
-            if (!d.exists()) {
-                if (!d.mkdir())
-                    FileUtility.printToScreen("Errore nel creare la cartella dove spostare i files obsoleti" +
-                            "\tpath: " + d);
             }
 
             if (d.isFile()) {
@@ -206,18 +216,6 @@ public class Copying implements Runnable {
             }
         }
 
-        for (File s : sourceFiles) {
-            if (s.isDirectory()) {
-                try {
-                    FileUtils.copyDirectoryToDirectory(
-                            s,
-                            this.destinationFile);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
         for (Thread thread : threads) {
             if (thread != null) {
                 try {
@@ -228,7 +226,7 @@ public class Copying implements Runnable {
             }
         }
 
-        Copying.countAndPrint('d');
+        Copying.countAndPrint('-');
     }
 
 }
